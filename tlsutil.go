@@ -126,7 +126,7 @@ func (c Certificate) PrivKeyPEM() []byte {
 	})
 }
 
-// TLSCertificate converts c into a [crypo/tls.Certificate].
+// TLSCertificate converts c into a [crypto/tls.Certificate].
 func (c Certificate) TLSCertificate() (tls.Certificate, error) {
 	return tls.X509KeyPair(c.CertPEM(), c.PrivKeyPEM())
 }

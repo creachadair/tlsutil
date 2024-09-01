@@ -145,7 +145,6 @@ func TestLoadCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create cert 2: %v", err)
 	}
-	_ = s
 
 	check := func(t *testing.T, srcs ...[]byte) {
 		t.Helper()
