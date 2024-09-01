@@ -43,9 +43,9 @@ func newSerialNumber() *big.Int {
 	return sn
 }
 
-// NewSigningCert creates a signing ("CA") certificate that is valid for the
-// specified period. The contents of base are used as a template for the cert,
-// allowing the caller to specify names and other constraints.
+// NewSigningCert creates a new self-signed signing ("CA") certificate that is
+// valid for the specified period. The contents of base are used as a template
+// for the cert, allowing the caller to specify names and other constraints.
 //
 // The following overrides are applied:
 //
