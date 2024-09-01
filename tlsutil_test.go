@@ -3,9 +3,12 @@
 package tlsutil_test
 
 import (
+	crand "crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net"
@@ -130,5 +133,101 @@ func TestCertPlumbing(t *testing.T) {
 		} else if !strings.Contains(err.Error(), "certificate has expired") {
 			t.Errorf("Got %q, want expiration error", err)
 		}
+	})
+}
+
+func TestLoadCertificate(t *testing.T) {
+	c, err := tlsutil.NewSigningCert(&x509.Certificate{}, time.Minute)
+	if err != nil {
+		t.Fatalf("Create cert 1: %v", err)
+	}
+	s, err := tlsutil.NewServerCert(&x509.Certificate{}, time.Minute, c)
+	if err != nil {
+		t.Fatalf("Create cert 2: %v", err)
+	}
+	_ = s
+
+	check := func(t *testing.T, srcs ...[]byte) {
+		t.Helper()
+		if _, err := tlsutil.LoadCertificate(srcs...); err != nil {
+			t.Errorf("Load: unexpected error: %v", err)
+		}
+	}
+	checkFail := func(t *testing.T, srcs [][]byte, want ...string) {
+		t.Helper()
+		got, err := tlsutil.LoadCertificate(srcs...)
+		if err == nil {
+			t.Fatalf("Load: got %+v, want error", got)
+		}
+		gotErr := err.Error()
+		for _, w := range want {
+			if !strings.Contains(gotErr, w) {
+				t.Errorf("Error is missing %q", w)
+			}
+		}
+		if t.Failed() {
+			t.Logf("Error string is: %q", gotErr)
+		}
+	}
+
+	t.Run("Empty", func(t *testing.T) {
+		checkFail(t, [][]byte{}, "missing certificate", "missing private key")
+	})
+
+	t.Run("Partial", func(t *testing.T) {
+		checkFail(t, [][]byte{s.CertPEM()}, "missing private key")
+		checkFail(t, [][]byte{s.PrivKeyPEM()}, "missing certificate")
+	})
+
+	t.Run("OK", func(t *testing.T) {
+		check(t, c.CertPEM(), c.PrivKeyPEM())
+		check(t, c.PrivKeyPEM(), c.CertPEM())
+	})
+
+	t.Run("Double", func(t *testing.T) {
+		checkFail(t, [][]byte{s.CertPEM(), s.PrivKeyPEM(), s.CertPEM()}, "multiple certificates")
+		checkFail(t, [][]byte{s.CertPEM(), s.PrivKeyPEM(), c.PrivKeyPEM()}, "multiple private keys")
+		batch := append(s.CertPEM(), c.CertPEM()...)
+		checkFail(t, [][]byte{batch}, "multiple certificates") // in a single batch
+	})
+
+	t.Run("BadCert", func(t *testing.T) {
+		bad := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: []byte("ho ho ho"),
+		})
+		checkFail(t, [][]byte{bad}, "invalid certificate")
+	})
+
+	t.Run("BadKey", func(t *testing.T) {
+		bad := pem.EncodeToMemory(&pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: []byte("where is ur god now"),
+		})
+		checkFail(t, [][]byte{bad}, "invalid private key")
+	})
+
+	t.Run("WrongKey", func(t *testing.T) {
+		key, err := rsa.GenerateKey(crand.Reader, 256)
+		if err != nil {
+			t.Fatalf("Generate RSA key: %v", err)
+		}
+		data, err := x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			t.Fatalf("Marshal RSA key: %v", err)
+		}
+		bad := pem.EncodeToMemory(&pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: data,
+		})
+		checkFail(t, [][]byte{bad}, "unsupported key format")
+	})
+
+	t.Run("OK/Other", func(t *testing.T) {
+		misc := pem.EncodeToMemory(&pem.Block{
+			Type:  "GETTYSBURG ADDRESS",
+			Bytes: []byte("four score and seven years ago, our fathers brought forth on this continent..."),
+		})
+		check(t, misc, c.CertPEM(), misc, c.PrivKeyPEM(), misc, misc)
 	})
 }

@@ -11,6 +11,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -191,4 +192,66 @@ func NewServerCert(base *x509.Certificate, validFor time.Duration, sc Certificat
 		privKey:      privKey,
 		privKeyBytes: privKeyBytes,
 	}, nil
+}
+
+// LoadCertificate loads a certificate and private key from srcs. The contents
+// of each slice must be in PEM format, and each slice may contain multiple PEM
+// blocks.
+//
+// An error is reported if the input does not contain exactly one CERTIFICATE
+// block and exactly one PRIVATE KEY block, or if either of those blocks are
+// not of the correct format. Any blocks of other types are ignored.
+//
+// If the caller has certificate and key data stored separately, they can be
+// concatenated into a single slice, or provided as separate slices.
+func LoadCertificate(srcs ...[]byte) (Certificate, error) {
+	var out Certificate
+
+	for _, data := range srcs {
+		for {
+			blk, rest := pem.Decode(data)
+			if blk == nil {
+				break
+			}
+			switch blk.Type {
+			case pemCertType:
+				if out.certBytes != nil {
+					return Certificate{}, errors.New("multiple certificates found")
+				} else if _, err := x509.ParseCertificate(blk.Bytes); err != nil {
+					return Certificate{}, fmt.Errorf("invalid certificate: %w", err)
+				}
+				out.certBytes = blk.Bytes
+
+			case pemPrivKeyType:
+				if out.privKey != nil {
+					return Certificate{}, errors.New("multiple private keys found")
+				}
+				pk, err := x509.ParsePKCS8PrivateKey(blk.Bytes)
+				if err != nil {
+					return Certificate{}, fmt.Errorf("invalid private key: %w", err)
+				}
+				kf, ok := pk.(*ecdsa.PrivateKey)
+				if !ok {
+					return Certificate{}, fmt.Errorf("unsupported key format %T", pk)
+				}
+				out.privKey = kf
+				out.privKeyBytes = blk.Bytes
+
+			default:
+				// OK, this is fine
+			}
+			data = rest
+		}
+
+		// Keep going even if we already have both components, since there might
+		// be duplicates later on that we want to report on.
+	}
+	var errs []error
+	if out.certBytes == nil {
+		errs = append(errs, errors.New("missing certificate"))
+	}
+	if out.privKey == nil {
+		errs = append(errs, errors.New("missing private key"))
+	}
+	return out, errors.Join(errs...)
 }
