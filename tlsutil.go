@@ -106,7 +106,9 @@ type Certificate struct {
 	privKeyBytes []byte
 }
 
-// CertPEM returns the certificate encoded as a CERTIFICATE block in PEM notation.
+// CertPEM returns the certificate encoded as a CERTIFICATE block in [PEM] notation.
+//
+// [PEM]: https://www.rfc-editor.org/rfc/rfc1421.html
 func (c Certificate) CertPEM() []byte {
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  pemCertType,
@@ -114,7 +116,9 @@ func (c Certificate) CertPEM() []byte {
 	})
 }
 
-// PrivKeyPEM returns the private key encoded as a PRIVATE KEY block in PEM notation.
+// PrivKeyPEM returns the private key encoded as a PRIVATE KEY block in [PEM] notation.
+//
+// [PEM]: https://www.rfc-editor.org/rfc/rfc1421.html
 func (c Certificate) PrivKeyPEM() []byte {
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  pemPrivKeyType,
@@ -195,8 +199,8 @@ func NewServerCert(base *x509.Certificate, validFor time.Duration, sc Certificat
 }
 
 // LoadCertificate loads a certificate and private key from srcs. The contents
-// of each slice must be in PEM format, and each slice may contain multiple PEM
-// blocks.
+// of each slice must be in [PEM] format, and each slice may contain multiple
+// PEM blocks.
 //
 // An error is reported if the input does not contain exactly one CERTIFICATE
 // block and exactly one PRIVATE KEY block, or if either of those blocks are
@@ -204,6 +208,8 @@ func NewServerCert(base *x509.Certificate, validFor time.Duration, sc Certificat
 //
 // If the caller has certificate and key data stored separately, they can be
 // concatenated into a single slice, or provided as separate slices.
+//
+// [PEM]: https://www.rfc-editor.org/rfc/rfc1421.html
 func LoadCertificate(srcs ...[]byte) (Certificate, error) {
 	var out Certificate
 
