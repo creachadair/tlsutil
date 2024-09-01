@@ -106,7 +106,7 @@ type Certificate struct {
 	privKeyBytes []byte
 }
 
-// CertPEM returns the certificate encoded in PEM notation.
+// CertPEM returns the certificate encoded as a CERTIFICATE block in PEM notation.
 func (c Certificate) CertPEM() []byte {
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  pemCertType,
@@ -114,7 +114,7 @@ func (c Certificate) CertPEM() []byte {
 	})
 }
 
-// PrivKeyPEM returns the private key encoded in PEM notation.
+// PrivKeyPEM returns the private key encoded as a PRIVATE KEY block in PEM notation.
 func (c Certificate) PrivKeyPEM() []byte {
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  pemPrivKeyType,
