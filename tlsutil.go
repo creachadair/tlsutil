@@ -53,7 +53,7 @@ func newSerialNumber() *big.Int {
 //   - If the "not before" time is not specified, [time.Now] is used.
 //   - The IsCA flag is set on the resulting cert.
 //   - The key is marked for cert signing, digital signatures, and key encipherment.
-func NewSigningCert(base *x509.Certificate, validFor time.Duration) (Certificate, error) {
+func NewSigningCert(validFor time.Duration, base *x509.Certificate) (Certificate, error) {
 	if validFor <= 0 {
 		return Certificate{}, fmt.Errorf("bad validity period: %v", validFor)
 	}
@@ -143,7 +143,7 @@ func (c Certificate) TLSCertificate() (tls.Certificate, error) {
 //   - The IsCA flag is cleared on the resulting cert.
 //   - The key is marked for digital signatures and key encipherment.
 //   - If ExtKeyUsage == nil, client and server auth are added.
-func NewServerCert(base *x509.Certificate, validFor time.Duration, sc Certificate) (Certificate, error) {
+func NewServerCert(validFor time.Duration, sc Certificate, base *x509.Certificate) (Certificate, error) {
 	if validFor <= 0 {
 		return Certificate{}, fmt.Errorf("bad validity period: %v", validFor)
 	}

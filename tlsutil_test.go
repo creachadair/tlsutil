@@ -23,10 +23,10 @@ import (
 
 func TestCertPlumbing(t *testing.T) {
 	// Create a signing certificate, and use it to sign a server certificate.
-	ca, err := tlsutil.NewSigningCert(&x509.Certificate{
+	ca, err := tlsutil.NewSigningCert(1*time.Hour, &x509.Certificate{
 		Subject: pkix.Name{Organization: []string{t.Name()}},
 		Issuer:  pkix.Name{Organization: []string{"tlsutil test package"}, CommonName: "Testy McTestface"},
-	}, 1*time.Hour)
+	})
 	if err != nil {
 		t.Fatalf("Create signing cert: %v", err)
 	}
@@ -63,10 +63,10 @@ func TestCertPlumbing(t *testing.T) {
 
 	t.Run("Valid", func(t *testing.T) {
 		// Create a valid server cert and wire it up to an HTTP server.
-		sc, err := tlsutil.NewServerCert(&x509.Certificate{
+		sc, err := tlsutil.NewServerCert(1*time.Hour, ca, &x509.Certificate{
 			Subject:     pkix.Name{Organization: []string{"HTTP test service"}},
 			IPAddresses: []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
-		}, 1*time.Hour, ca)
+		})
 		if err != nil {
 			t.Fatalf("Create server cert: %v", err)
 		}
@@ -110,11 +110,11 @@ func TestCertPlumbing(t *testing.T) {
 
 	t.Run("Expired", func(t *testing.T) {
 		// Create an expired server cert and make sure the client notices.
-		sc, err := tlsutil.NewServerCert(&x509.Certificate{
+		sc, err := tlsutil.NewServerCert(1*time.Hour, ca, &x509.Certificate{
 			Subject:     pkix.Name{Organization: []string{"HTTP test service"}},
 			IPAddresses: []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
 			NotBefore:   time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), // "a long time ago"
-		}, 1*time.Hour, ca)
+		})
 		if err != nil {
 			t.Fatalf("Create server cert: %v", err)
 		}
@@ -137,11 +137,11 @@ func TestCertPlumbing(t *testing.T) {
 }
 
 func TestLoadCertificate(t *testing.T) {
-	c, err := tlsutil.NewSigningCert(&x509.Certificate{}, time.Minute)
+	c, err := tlsutil.NewSigningCert(time.Minute, &x509.Certificate{})
 	if err != nil {
 		t.Fatalf("Create cert 1: %v", err)
 	}
-	s, err := tlsutil.NewServerCert(&x509.Certificate{}, time.Minute, c)
+	s, err := tlsutil.NewServerCert(time.Minute, c, &x509.Certificate{})
 	if err != nil {
 		t.Fatalf("Create cert 2: %v", err)
 	}
