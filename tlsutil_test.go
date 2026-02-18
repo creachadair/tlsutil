@@ -207,7 +207,7 @@ func TestLoadCertificate(t *testing.T) {
 	})
 
 	t.Run("WrongKey", func(t *testing.T) {
-		key, err := rsa.GenerateKey(crand.Reader, 256)
+		key, err := rsa.GenerateKey(crand.Reader, 1024)
 		if err != nil {
 			t.Fatalf("Generate RSA key: %v", err)
 		}
